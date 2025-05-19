@@ -9,5 +9,6 @@ router.post('/create', TeacherController.createUser);
 router.post('/logout', TeacherController.logout);
 router.post('/:sessionId/qrcode', TeacherController.createQRCode)
 router.get('/me', authenticate, TeacherController.TeacherData)
+router.get('/:qrcodeId', TeacherController.getqrCode);
 
 export default router;

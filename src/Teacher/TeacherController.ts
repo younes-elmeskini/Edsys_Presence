@@ -128,49 +128,80 @@ export default class TeacherController {
     res.status(200).json({ message: "Logout successful" });
   }
   static async createQRCode(req: Request, res: Response): Promise<void> {
-  try {
-    const { sessionId } = req.params;
+    try {
+      const { sessionId } = req.params;
 
-    const session = await prisma.session.findUnique({ where: { sessionId } });
-    if (!session) {
-      res.status(404).json({ message: "Session not found" });
-      return;
+      const session = await prisma.session.findUnique({ where: { sessionId } });
+      if (!session) {
+        res.status(404).json({ message: "Session not found" });
+        return;
+      }
+
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const tempPath = path.join(os.tmpdir(), `${code}.png`);
+      await QRCode.toFile(tempPath, code);
+
+      // Upload vers Cloudinary
+      const result = await cloudinary.uploader.upload(tempPath, {
+        folder: "qrcodes",
+        public_id: code,
+        use_filename: true,
+      });
+
+      // Supprimer le fichier temporaire
+      await fs.unlink(tempPath);
+
+      // Sauvegarde dans la base de données
+      const savedQR = await prisma.qRcode.create({
+        data: {
+          code,
+          qrImage: result.secure_url,
+          expiredAt: new Date(Date.now() + 3 * 60 * 60 * 1000), // expire dans 3h
+          session: { connect: { sessionId } },
+        },
+      });
+
+      res.status(201).json({
+        message: "QR Code created and uploaded",
+        qrCode: savedQR,
+        url: result.secure_url,
+      });
+    } catch (error) {
+      console.error("QR Code creation error:", error);
+      res.status(500).json({ message: "Failed to create QR Code" });
     }
-
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-
-    
-    const tempPath = path.join(os.tmpdir(), `${code}.png`);
-    await QRCode.toFile(tempPath, code);
-
-    // Upload vers Cloudinary
-    const result = await cloudinary.uploader.upload(tempPath, {
-      folder: "qrcodes",
-      public_id: code,
-      use_filename: true,
-    });
-
-    // Supprimer le fichier temporaire
-    await fs.unlink(tempPath);
-
-    // Sauvegarde dans la base de données
-    const savedQR = await prisma.qRcode.create({
-      data: {
-        code,
-        qrImage: result.secure_url,
-        expiredAt: new Date(Date.now() + 3 * 60 * 60 * 1000), // expire dans 3h
-        session: { connect: { sessionId } },
-      },
-    });
-
-    res.status(201).json({
-      message: "QR Code created and uploaded",
-      qrCode: savedQR,
-      url: result.secure_url,
-    });
-  } catch (error) {
-    console.error("QR Code creation error:", error);
-    res.status(500).json({ message: "Failed to create QR Code" });
   }
-}
+  static getqrCode = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { qrcodeId } = req.params;
+      const qrcode = await prisma.qRcode.findUnique({
+        where: {
+          qrcodeId,
+        },
+      });
+      if (!qrcode) {
+        res.status(404).json({ message: "QR code not fond" });
+        return;
+      }
+      const publicId = `qrcodes/${qrcode.code}`;
+
+      const qrcodeImage = await cloudinary.api.resource(publicId, {
+        type: "upload",
+        resource_type: "image",
+      });
+
+      res.status(200).json({
+        message: "QR code found",
+        qrcode: {
+          code: qrcode.code,
+          qrImage: qrcodeImage.secure_url,
+          expiredAt: qrcode.expiredAt,
+        },
+      });
+    } catch (error) {
+      console.error("QR Code found error:", error);
+      res.status(500).json({ message: "Failed to found QR Code", error });
+    }
+  };
 }
