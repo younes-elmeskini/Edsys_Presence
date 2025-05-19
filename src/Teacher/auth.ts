@@ -3,8 +3,7 @@ import jwt from "jsonwebtoken";
 import { Teacher } from "@prisma/client";
 
 export interface TeacherJwtPayload {
-  studentId: String;
-  role: string;
+  teacherId: String;
 }
 export const generateToken = (teacher: Teacher) => {
   if (!process.env.JWT_SECRET) {
@@ -12,7 +11,7 @@ export const generateToken = (teacher: Teacher) => {
   }
   const token = jwt.sign(
     {
-      userId: teacher.teacherId,
+      teacherId: teacher.teacherId,
     },
     process.env.JWT_SECRET,
     { expiresIn: "1d" }

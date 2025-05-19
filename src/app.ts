@@ -38,6 +38,6 @@ app.use(limiter);
 // Routes
 app.use("/teacher", TeacherRoute);
 
-app.use("/student", StudentRoute);
+// app.use("/student", StudentRoute);
 
 export default app;
