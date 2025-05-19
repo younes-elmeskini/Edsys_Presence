@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  teacherId   String    @id @default(cuid())
+  FirstName   String
+  lastName    String
+  email       String    @unique
+  password    String
+  profilImage String?
+  Session     Session[]
+  ceatedAt    DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+}
+
+model Student {
+  studentId      String           @id @default(cuid())
+  firstName      String
+  lastName       String
+  email          String           @unique
+  password       String
+  profilImage    String?
+  Session        Session[]        @relation("SessionStudents")
+  ceatedAt       DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  StudentAbsence StudentAbsence[]
+}
+
+model Session {
+  sessionId      String           @id @default(cuid())
+  title          String
+  data           String
+  teacherPresent Boolean          @default(false)
+  startTime      DateTime
+  endTime        DateTime
+  teacher        Teacher          @relation(fields: [teacherId], references: [teacherId])
+  teacherId      String
+  students       Student[]        @relation("SessionStudents")
+  ceatedAt       DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  StudentAbsence StudentAbsence[]
+  QRcode         QRcode[]
+}
+
+model StudentAbsence {
+  studentAbsenceId String    @id @default(cuid())
+  student          Student   @relation(fields: [studentId], references: [studentId])
+  studentId        String
+  session          Session   @relation(fields: [sessionId], references: [sessionId])
+  sessionId        String
+  reason           String
+  isLate           Boolean   @default(false)
+  isAbsent         Boolean   @default(false)
+  isPresnet        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+}
+
+model QRcode {
+  qrcodeId  String   @id @default(cuid())
+  qrImage   String
+  code      String   @unique
+  session   Session  @relation(fields: [sessionId], references: [sessionId])
+  sessionId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
