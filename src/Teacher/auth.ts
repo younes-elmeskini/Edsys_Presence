@@ -1,22 +1,21 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { User } from "@prisma/client";
+import { Teacher } from "@prisma/client";
 
-interface JwtPayload {
-  userId: String;
+export interface TeacherJwtPayload {
+  studentId: String;
   role: string;
 }
-export const generateToken = (user: User, stayed: Boolean) => {
+export const generateToken = (teacher: Teacher) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET must be defined");
   }
   const token = jwt.sign(
     {
-      userId: user.userId,
-      role: user.role,
+      userId: teacher.teacherId,
     },
     process.env.JWT_SECRET,
-    { expiresIn: stayed ? "15d" : "1d" }
+    { expiresIn: "1d" }
   );
   return token;
 };
@@ -38,8 +37,8 @@ export const authenticate = (
       throw new Error("JWT_SECRET must be defined");
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET) as JwtPayload;
-    req.user = decoded;
+    const decoded = jwt.verify(token, process.env.JWT_SECRET) as TeacherJwtPayload;
+    req.teacher = decoded;
     next();
   } catch (err) {
     res.status(401).json({ message: "Invalid token." });

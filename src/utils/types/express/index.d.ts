@@ -1,9 +1,11 @@
-import { JwtPayload } from '../../../middlewares/auth';
+import { StudentJwtPayload } from '../../../Student/auth';
+import { TeacherJwtPayload } from '../../../Teacher/auth';
 
 declare global {
   namespace Express {
     interface Request {
-      user?: JwtPayload;
+      student?: StudentJwtPayload;
+      teacher?: TeacherJwtPayload;
     }
   }
 }
