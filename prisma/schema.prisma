@@ -43,12 +43,12 @@ model Student {
 model Session {
   sessionId      String           @id @default(cuid())
   title          String
-  data           String
+  data           String?
   teacherPresent Boolean          @default(false)
-  startTime      DateTime
-  endTime        DateTime
-  teacher        Teacher          @relation(fields: [teacherId], references: [teacherId])
-  teacherId      String
+  startTime      DateTime?
+  endTime        DateTime?
+  teacher        Teacher?          @relation(fields: [teacherId], references: [teacherId])
+  teacherId      String?
   students       Student[]        @relation("SessionStudents")
   ceatedAt       DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -76,8 +76,11 @@ model QRcode {
   qrcodeId  String   @id @default(cuid())
   qrImage   String
   code      String   @unique
+  expiredAt DateTime 
   session   Session  @relation(fields: [sessionId], references: [sessionId])
   sessionId String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+
