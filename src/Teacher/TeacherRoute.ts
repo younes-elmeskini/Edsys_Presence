@@ -8,6 +8,7 @@ router.post("/login", TeacherController.login);
 router.post("/create", TeacherController.createUser);
 router.post("/logout", TeacherController.logout);
 router.post("/:sessionId/qrcode", authenticate, TeacherController.createQRCode);
+router.post("/:sessionId/endsession", authenticate, TeacherController.endSession);
 
 router.get("/me", authenticate, TeacherController.TeacherData);
 router.get("/", TeacherController.getStudents);

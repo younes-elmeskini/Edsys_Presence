@@ -252,58 +252,110 @@ export default class TeacherController {
     }
   }
   static async StudentSession(req: Request, res: Response): Promise<void> {
-  try {
-    const teacherId = req.teacher?.teacherId;
-    if (!teacherId) {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
+    try {
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      const { sessionId } = req.params;
+
+      const students = await prisma.student.findMany({
+        select: {
+          studentId: true,
+          firstName: true,
+          lastName: true,
+        },
+      });
+
+      if (students.length === 0) {
+        res.status(404).json({ message: "No students found" });
+        return;
+      }
+
+      const studentAbsences = await prisma.studentAbsence.findMany({
+        where: { sessionId },
+        select: {
+          studentId: true,
+          isAbsent: true,
+          isLate: true,
+          isPresnet: true,
+        },
+      });
+
+      const absenceMap = new Map(
+        studentAbsences.map((sa) => [sa.studentId, sa])
+      );
+
+      const response = students.map((student) => {
+        const status = absenceMap.get(student.studentId);
+        return {
+          ...student,
+          isAbsent: status?.isAbsent ?? false,
+          isLate: status?.isLate ?? false,
+          isPresnet: status?.isPresnet ?? false,
+        };
+      });
+
+      res.status(200).json({ message: "Students found", data: response });
+    } catch (error) {
+      console.error("Students found error:", error);
+      res.status(500).json({ message: "Failed to find Students" });
     }
-
-    const { sessionId } = req.params;
-
-    const students = await prisma.student.findMany({
-      select: {
-        studentId: true,
-        firstName: true,
-        lastName: true,
-      },
-    });
-
-    if (students.length === 0) {
-      res.status(404).json({ message: "No students found" });
-      return;
-    }
-
-    const studentAbsences = await prisma.studentAbsence.findMany({
-      where: { sessionId },
-      select: {
-        studentId: true,
-        isAbsent: true,
-        isLate: true,
-        isPresnet: true,
-      },
-    });
-
-    const absenceMap = new Map(
-      studentAbsences.map(sa => [sa.studentId, sa])
-    );
-
-    const response = students.map(student => {
-      const status = absenceMap.get(student.studentId);
-      return {
-        ...student,
-        isAbsent: status?.isAbsent ?? false,
-        isLate: status?.isLate ?? false,
-        isPresnet: status?.isPresnet ?? false,
-      };
-    });
-
-    res.status(200).json({ message: "Students found", data: response });
-  } catch (error) {
-    console.error("Students found error:", error);
-    res.status(500).json({ message: "Failed to find Students" });
   }
-}
+  static async endSession(req: Request, res: Response): Promise<void> {
+    try {
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      const { sessionId } = req.params;
+      const session = await prisma.session.findUnique({
+        where: { sessionId },
+      });
+      if (!session) {
+        res.status(400).json({ message: "Session ID is required" });
+        return;
+      }
+
+      const studentPresnt = await prisma.studentAbsence.findMany({
+        where: { sessionId },
+        select: { studentId: true },
+      });
+
+      const presentIds = new Set(studentPresnt.map((sp) => sp.studentId));
+
+      const allStudents = await prisma.student.findMany({
+        select: { studentId: true },
+      });
+
+      const absentStudents = allStudents.filter(
+        (student) => !presentIds.has(student.studentId)
+      );
+
+      for (const student of absentStudents) {
+        await prisma.studentAbsence.create({
+          data: {
+            sessionId,
+            studentId: student.studentId,
+            isAbsent: true,
+            isLate: false,
+            isPresnet: false,
+          },
+        });
+      }
+
+      res.status(200).json({
+        message: "Session ended. Absences marked.",
+      });
+    } catch (error) {
+      console.error("Error ending session:", error);
+      res.status(500).json({ message: "Failed to end session" });
+    }
+  }
   static async getStudents(req: Request, res: Response): Promise<void> {
     try {
       const students = await prisma.student.findMany({
