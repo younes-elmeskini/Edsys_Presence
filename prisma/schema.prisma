@@ -63,7 +63,7 @@ model StudentAbsence {
   studentId        String
   session          Session   @relation(fields: [sessionId], references: [sessionId])
   sessionId        String
-  reason           String
+  reason           String?
   isLate           Boolean   @default(false)
   isAbsent         Boolean   @default(false)
   isPresnet        Boolean   @default(false)

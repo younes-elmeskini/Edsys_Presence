@@ -121,7 +121,10 @@ export default class TeacherController {
         return;
       }
       res.status(200).json({ data: teacher });
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error fetching Teacher data:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
   static async logout(req: Request, res: Response) {
     res.clearCookie("token");
@@ -153,10 +156,10 @@ export default class TeacherController {
         },
       });
 
-      const frontendUrl = `https://www.joinspots.com`; 
+      const frontendUrl = `https://www.joinspots.com`;
 
       const tempPath = path.join(os.tmpdir(), `${code}.png`);
-      await QRCode.toFile(tempPath, frontendUrl); 
+      await QRCode.toFile(tempPath, frontendUrl);
 
       const result = await cloudinary.uploader.upload(tempPath, {
         folder: "qrcodes",
@@ -216,5 +219,4 @@ export default class TeacherController {
       res.status(500).json({ message: "Failed to found QR Code", error });
     }
   };
-  
 }
