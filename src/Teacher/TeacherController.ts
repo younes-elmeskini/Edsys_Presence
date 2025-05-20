@@ -133,7 +133,11 @@ export default class TeacherController {
   static async createQRCode(req: Request, res: Response): Promise<void> {
     try {
       const { sessionId } = req.params;
-
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
       const session = await prisma.session.findUnique({ where: { sessionId } });
       if (!session) {
         res.status(404).json({ message: "Session not found" });
@@ -189,6 +193,11 @@ export default class TeacherController {
   }
   static getqrCode = async (req: Request, res: Response): Promise<void> => {
     try {
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
       const { qrcodeId } = req.params;
       const qrcode = await prisma.qRcode.findUnique({
         where: {
@@ -208,7 +217,7 @@ export default class TeacherController {
 
       res.status(200).json({
         message: "QR code found",
-        qrcode: {
+        data: {
           code: qrcode.code,
           qrImage: qrcodeImage.secure_url,
           expiredAt: qrcode.expiredAt,
@@ -219,4 +228,62 @@ export default class TeacherController {
       res.status(500).json({ message: "Failed to found QR Code", error });
     }
   };
+  static async getSession(req: Request, res: Response): Promise<void> {
+    try {
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+      const sessions = await prisma.session.findMany({
+        select: {
+          sessionId: true,
+          title: true,
+        },
+      });
+      if (sessions.length === 0) {
+        res.status(404).json({ message: "No sessions found" });
+        return;
+      }
+      res.status(200).json({ message: "Sessions found", data: sessions });
+    } catch (error) {
+      console.error("Sessions found error:", error);
+      res.status(500).json({ message: "Failed to found Sessions" });
+    }
+  }
+  static async StudentSession(req: Request, res: Response): Promise<void> {
+    try {
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+      const { sessionId } = req.params;
+      const students = await prisma.studentAbsence.findMany({
+        where: {
+          sessionId: sessionId,
+        },
+        select: {
+          student: {
+            select: {
+              studentId: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          isAbsent: true,
+          isLate: true,
+          isPresnet: true,
+        },
+      });
+      if (students.length === 0) {
+        res.status(404).json({ message: "No students found for this session" });
+        return;
+      }
+      res.status(200).json({ message: "Students found", data: students });
+    } catch (error) {
+      console.error("Students found error:", error);
+      res.status(500).json({ message: "Failed to found Students" });
+    }
+  }
 }
