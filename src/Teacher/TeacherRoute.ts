@@ -20,4 +20,6 @@ router.get(
 );
 router.get("/:qrcodeId", TeacherController.getqrCode);
 
+router.put("/absence/:sessionId/:studentId",authenticate, TeacherController.updateAbsence);
+
 export default router;

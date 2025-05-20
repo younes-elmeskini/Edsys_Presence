@@ -356,6 +356,47 @@ export default class TeacherController {
       res.status(500).json({ message: "Failed to end session" });
     }
   }
+  static async updateAbsence(req: Request, res: Response): Promise<void> {
+    try {
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+      const { sessionId, studentId } = req.params;
+      const { isAbsent, isLate, isPresnet } = req.body;
+
+      const absenceRecord = await prisma.studentAbsence.findFirst({
+        where: {
+          sessionId,
+          studentId,
+        },
+      });
+      if (!absenceRecord) {
+        res.status(404).json({ message: "Absence record not found" });
+        return;
+      }
+
+      const updatedAbsence = await prisma.studentAbsence.update({
+        where: {
+          studentAbsenceId: absenceRecord.studentAbsenceId,
+        },
+        data: {
+          isAbsent,
+          isLate,
+          isPresnet,
+        },
+      });
+
+      res.status(200).json({
+        message: "Absence updated successfully",
+        data: updatedAbsence,
+      });
+    } catch (error) {
+      console.error("Update absence error:", error);
+      res.status(500).json({ message: "Failed to update absence", error });
+    }
+  }
   static async getStudents(req: Request, res: Response): Promise<void> {
     try {
       const students = await prisma.student.findMany({
