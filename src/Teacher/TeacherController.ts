@@ -136,35 +136,40 @@ export default class TeacherController {
         res.status(404).json({ message: "Session not found" });
         return;
       }
-
       const code = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const tempPath = path.join(os.tmpdir(), `${code}.png`);
-      await QRCode.toFile(tempPath, code);
-
-      // Upload vers Cloudinary
-      const result = await cloudinary.uploader.upload(tempPath, {
-        folder: "qrcodes",
-        public_id: code,
-        use_filename: true,
-      });
-
-      // Supprimer le fichier temporaire
-      await fs.unlink(tempPath);
-
-      // Sauvegarde dans la base de données
       const savedQR = await prisma.qRcode.create({
         data: {
-          code,
-          qrImage: result.secure_url,
+          code: code,
           expiredAt: new Date(Date.now() + 3 * 60 * 60 * 1000), // expire dans 3h
           session: { connect: { sessionId } },
         },
       });
 
+      const frontendUrl = `https://www.joinspots.com`; 
+
+      const tempPath = path.join(os.tmpdir(), `${code}.png`);
+      await QRCode.toFile(tempPath, frontendUrl); 
+
+      const result = await cloudinary.uploader.upload(tempPath, {
+        folder: "qrcodes",
+        public_id: `${code}_${sessionId}`,
+        use_filename: true,
+      });
+
+      // Sauvegarde dans la base de données
+      const finalsavedQR = await prisma.qRcode.update({
+        where: {
+          qrcodeId: savedQR.qrcodeId,
+        },
+        data: {
+          qrImage: result.secure_url,
+        },
+      });
+
       res.status(201).json({
         message: "QR Code created and uploaded",
-        qrCode: savedQR,
+        qrCode: finalsavedQR,
         url: result.secure_url,
       });
     } catch (error) {
