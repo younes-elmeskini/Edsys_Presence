@@ -125,7 +125,7 @@ export default class UserController {
     res.clearCookie("token");
     res.status(200).json({ message: "Logout successful" });
   }
-  static async checkAbsence(req: Request, res: Response): Promise<void> {
+  static async checkQrAbsence(req: Request, res: Response): Promise<void> {
     try {
       const studentId = req.student?.studentId;
       if (!studentId) {
@@ -153,7 +153,7 @@ export default class UserController {
           sessionId: sessionId.toString(),
         },
       });
-      if(checkAbsence){
+      if (checkAbsence) {
         res.status(200).json({ message: "Already scanned" });
         return;
       }
@@ -190,7 +190,77 @@ export default class UserController {
       if (qrcode.expiredAt.getTime() < Date.now()) {
         res.status(400).json({ message: "Qrcode Expired" });
       }
-      res.status(200).json({ message: "Scanned successfully", });
+      res.status(200).json({ message: "Scanned successfully" });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  }
+  static async checkCodeAbsence(req: Request, res: Response): Promise<void> {
+    try {
+      const studentId = req.student?.studentId;
+      if (!studentId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      const code = req.body;
+      const qrcode = await prisma.qRcode.findFirst({
+        where: { code },
+        select: {
+          sessionId: true,
+          createdAt: true,
+          expiredAt: true,
+        },
+      });
+      if (!qrcode) {
+        res.status(404).json({ message: "code not found" });
+        return;
+      }
+      const sessionId = qrcode.sessionId;
+      const checkAbsence = await prisma.studentAbsence.findFirst({
+        where: {
+          studentId: studentId.toString(),
+          sessionId: sessionId.toString(),
+        },
+      });
+      if (checkAbsence) {
+        res.status(200).json({ message: "Already scanned" });
+        return;
+      }
+      if (qrcode.createdAt.getTime() + 15 * 60 * 1000 > Date.now()) {
+        await prisma.studentAbsence.create({
+          data: {
+            studentId: studentId.toString(),
+            sessionId: qrcode.sessionId.toString(),
+            isPresnet: true,
+          },
+        });
+        res.status(200).json({
+          message: "Scanned successfully, you are on time",
+        });
+        return;
+      }
+      if (
+        qrcode.createdAt.getTime() + 15 * 60 * 1000 < Date.now() &&
+        qrcode.expiredAt.getTime() > Date.now()
+      ) {
+        await prisma.studentAbsence.create({
+          data: {
+            studentId: studentId.toString(),
+            sessionId: qrcode.sessionId.toString(),
+            isLate: true,
+          },
+        });
+        res.status(200).json({
+          message: "Scanned successfully, but you are late",
+        });
+        return;
+      }
+      if (qrcode.expiredAt.getTime() < Date.now()) {
+        res.status(400).json({ message: "Qrcode Expired" });
+      }
+      res.status(200).json({ message: "Scanned successfully" });
     } catch (error) {
       console.error("Error fetching data:", error);
       res.status(500).json({ message: "Internal server error" });
