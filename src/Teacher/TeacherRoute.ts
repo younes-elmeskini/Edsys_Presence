@@ -10,6 +10,7 @@ router.post("/logout", TeacherController.logout);
 router.post("/:sessionId/qrcode", authenticate, TeacherController.createQRCode);
 
 router.get("/me", authenticate, TeacherController.TeacherData);
+router.get("/",TeacherController.getStudents)
 router.get("/sessions", authenticate, TeacherController.getSession);
 router.get(
   "/absence/:sessionId",
