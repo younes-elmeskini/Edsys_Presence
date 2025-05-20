@@ -43,7 +43,7 @@ model Student {
 model Session {
   sessionId      String           @id @default(cuid())
   title          String
-  data           String?
+  date           String?
   teacherPresent Boolean          @default(false)
   startTime      DateTime?
   endTime        DateTime?
