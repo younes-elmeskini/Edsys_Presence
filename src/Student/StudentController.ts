@@ -101,11 +101,11 @@ export default class UserController {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
-      const student = await prisma.teacher.findUnique({
-        where: { teacherId: studentId.toString() },
+      const student = await prisma.student.findUnique({
+        where: { studentId: studentId.toString() },
         select: {
-          teacherId: true,
-          FirstName: true,
+          studentId: true,
+          firstName: true,
           lastName: true,
           email: true,
           profilImage: true,
@@ -116,10 +116,84 @@ export default class UserController {
         return;
       }
       res.status(200).json({ data: student });
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error fetching student data:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
   static async logout(req: Request, res: Response) {
     res.clearCookie("token");
     res.status(200).json({ message: "Logout successful" });
+  }
+  static async checkAbsence(req: Request, res: Response): Promise<void> {
+    try {
+      const studentId = req.student?.studentId;
+      if (!studentId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+
+      const qrcodeId = req.params.qrcodeId;
+      const qrcode = await prisma.qRcode.findFirst({
+        where: { qrcodeId },
+        select: {
+          sessionId: true,
+          createdAt: true,
+          expiredAt: true,
+        },
+      });
+      if (!qrcode) {
+        res.status(404).json({ message: "QR code not found" });
+        return;
+      }
+      const sessionId = qrcode.sessionId;
+      const checkAbsence = await prisma.studentAbsence.findFirst({
+        where: {
+          studentId: studentId.toString(),
+          sessionId: sessionId.toString(),
+        },
+      });
+      if(checkAbsence){
+        res.status(200).json({ message: "Already scanned" });
+        return;
+      }
+      let check;
+      if (qrcode.createdAt.getTime() + 15 * 60 * 1000 > Date.now()) {
+        check = await prisma.studentAbsence.create({
+          data: {
+            studentId: studentId.toString(),
+            sessionId: qrcode.sessionId.toString(),
+            isPresnet: true,
+          },
+        });
+        res.status(200).json({
+          message: "Scanned successfully, you are on time",
+        });
+        return;
+      }
+      if (
+        qrcode.createdAt.getTime() + 15 * 60 * 1000 < Date.now() &&
+        qrcode.expiredAt.getTime() > Date.now()
+      ) {
+        check = await prisma.studentAbsence.create({
+          data: {
+            studentId: studentId.toString(),
+            sessionId: qrcode.sessionId.toString(),
+            isLate: true,
+          },
+        });
+        res.status(200).json({
+          message: "Scanned successfully, but you are late",
+        });
+        return;
+      }
+      if (qrcode.expiredAt.getTime() < Date.now()) {
+        res.status(400).json({ message: "Qrcode Expired" });
+      }
+      res.status(200).json({ message: "Scanned successfully", });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   }
 }
