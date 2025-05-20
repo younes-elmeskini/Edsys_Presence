@@ -136,7 +136,14 @@ export default class TeacherController {
         res.status(404).json({ message: "Session not found" });
         return;
       }
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      let code: string;
+      let existingCode;
+      do {
+        code = Math.floor(100000 + Math.random() * 900000).toString();
+        existingCode = await prisma.qRcode.findUnique({
+          where: { code },
+        });
+      } while (existingCode);
 
       const savedQR = await prisma.qRcode.create({
         data: {
@@ -209,4 +216,5 @@ export default class TeacherController {
       res.status(500).json({ message: "Failed to found QR Code", error });
     }
   };
+  
 }
