@@ -160,7 +160,7 @@ export default class TeacherController {
         },
       });
 
-      const frontendUrl = `https://www.joinspots.com`;
+      const frontendUrl = `http://localhost:3000/absance/${savedQR.qrcodeId} `;
 
       const tempPath = path.join(os.tmpdir(), `${code}.png`);
       await QRCode.toFile(tempPath, frontendUrl);
