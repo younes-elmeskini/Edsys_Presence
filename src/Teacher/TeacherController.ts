@@ -253,14 +253,12 @@ export default class TeacherController {
   }
   static async StudentSession(req: Request, res: Response): Promise<void> {
     try {
+      const { sessionId } = req.body;
       const teacherId = req.teacher?.teacherId;
       if (!teacherId) {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
-
-      const { sessionId } = req.params;
-
       const students = await prisma.student.findMany({
         select: {
           studentId: true,
