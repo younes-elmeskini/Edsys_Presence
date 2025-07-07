@@ -314,7 +314,13 @@ export default class TeacherController {
       const studentAbsences = await prisma.studentAbsence.findMany({
         where: { sessionId },
         select: {
-          studentId: true,
+          student: {
+            select: {
+              studentId: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
           isAbsent: true,
           isLate: true,
           isPresnet: true,
