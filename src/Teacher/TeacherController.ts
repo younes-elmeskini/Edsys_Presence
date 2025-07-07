@@ -161,7 +161,7 @@ export default class TeacherController {
         },
       });
 
-      const frontendUrl = `http://localhost:3000/absance/${savedQR.qrcodeId} `;
+      const frontendUrl = `${process.env.FRONTEND_URL}/absance/${savedQR.qrcodeId} `;
 
       const tempPath = path.join(os.tmpdir(), `${code}.png`);
       await QRCode.toFile(tempPath, frontendUrl);
@@ -179,6 +179,13 @@ export default class TeacherController {
         },
         data: {
           qrImage: result.secure_url,
+        },
+      });
+
+      await prisma.session.update({
+        where: { sessionId },
+        data: {
+          teacherPresent: true,
         },
       });
 
