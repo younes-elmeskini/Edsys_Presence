@@ -18,7 +18,8 @@ router.get(
   authenticate,
   TeacherController.StudentSession
 );
-router.get("/:qrcodeId", TeacherController.getqrCode);
+router.get("/:qrcodeId",authenticate, TeacherController.getqrCode);
+router.get("/absence/:sessionId", authenticate, TeacherController.getStudentAbsence);
 
 router.put("/absence/:sessionId/:studentId",authenticate, TeacherController.updateAbsence);
 

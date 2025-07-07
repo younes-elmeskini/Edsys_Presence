@@ -138,6 +138,7 @@ export default class TeacherController {
         res.status(401).json({ message: "Unauthorized" });
         return;
       }
+      console.log("sessionId", sessionId);
       const session = await prisma.session.findUnique({ where: { sessionId } });
       if (!session) {
         res.status(404).json({ message: "Session not found" });
@@ -300,6 +301,32 @@ export default class TeacherController {
     } catch (error) {
       console.error("Students found error:", error);
       res.status(500).json({ message: "Failed to find Students" });
+    }
+  }
+  static async getStudentAbsence(req: Request, res: Response): Promise<void> {
+    try {
+      const { sessionId } = req.params;
+      const teacherId = req.teacher?.teacherId;
+      if (!teacherId) {
+        res.status(401).json({ message: "Unauthorized" });
+        return;
+      }
+      const studentAbsences = await prisma.studentAbsence.findMany({
+        where: { sessionId },
+        select: {
+          studentId: true,
+          isAbsent: true,
+          isLate: true,
+          isPresnet: true,
+        },
+      });
+
+      res
+        .status(200)
+        .json({ message: "Student absences found", data: studentAbsences });
+    } catch (error) {
+      console.error("Student absences found error:", error);
+      res.status(500).json({ message: "Failed to find student absences" });
     }
   }
   static async endSession(req: Request, res: Response): Promise<void> {
